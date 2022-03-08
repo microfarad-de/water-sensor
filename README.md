@@ -27,7 +27,7 @@ The level is signalled via the signal voltage ranging from 0 V (empty tank) to 2
 
 A resistive water level sensor consists of two metal electrodes that are submerged into the water tank. Whereas the part of the electrode surface that is submerged increases with increasing water level. Thus, the resistance betwee both electrodes is inversely proportional to the water level.
 
-The adapter measures the resistance between the electrodes and produces a signal volatage that is compatible with the CBE display panel.
+The adapter measures the resistance between the electrodes and produces a signal voltage that is compatible with the CBE display panel.
 
 ## Circuit Diagram
 
