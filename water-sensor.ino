@@ -61,19 +61,20 @@
 #define SERIAL_BAUD      115200  // Serial communication baud rate
 #define ADC_AVG_SAMPLES      16  // Number of ADC samples to be averaged
 #define PWM_0                 0  // PWM setting for 0%
-#define PWM_25               31  // PWM setting for 25%
-#define PWM_50               63  // PWM setting for 50%
-#define PWM_75               95  // PWM setting for 75%
-#define PWM_100             127  // PWM setting for 100%
+#define PWM_25               63  // PWM setting for 25%
+#define PWM_50              127  // PWM setting for 50%
+#define PWM_75              191  // PWM setting for 75%
+#define PWM_100             255  // PWM setting for 100%
 #define ADC_MAX            1023  // Maximum ADC value
-//#define FIX_PWM        PWM_25  // Hardcode PWM output to a certain value (debug only)
+//#define FIX_PWM        PWM_75  // Hardcode PWM output to a certain value (debug only)
 
 
 /*
  * Global variables
  */
 struct {
-  uint16_t adcVal = 0; // Current ADC reading value
+  uint16_t adcVal = 0; // ADC reading value
+  uint8_t  pwmVal = 0; // PWM setting
 } G;
 
 
@@ -112,6 +113,9 @@ void setup () {
   // Iniialize pins
   pinMode (OUTPUT_PIN, OUTPUT);
   analogWrite (OUTPUT_PIN, 0);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH); 
+  
 
   // Initialize the command-line interface
   Cli.init ( SERIAL_BAUD );
@@ -122,7 +126,7 @@ void setup () {
   Serial.println ("");
   Serial.println (F("'h' for help"));
   Cli.newCmd ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
-  Cli.newCmd ("s"   , "Show the ADC reading"             , cmdShow);
+  Cli.newCmd ("s"   , "Show real time readings"          , cmdShow);
   Cli.newCmd ("r"   , "Show the calibration data"        , cmdRom);
 
   // Initialize the ADC
@@ -138,7 +142,6 @@ void setup () {
  * Main loop
  */
 void loop () {
-  uint8_t pwmVal;
 
   // Command-line interpreter
   Cli.getCmd ();
@@ -150,24 +153,30 @@ void loop () {
     // Thus, we invert the slope by subtracting from ADC_MAX.
     G.adcVal = ADC_MAX - (uint16_t)Adc.result[SENSOR_APIN];
 
-    if (G.adcVal < Nvm.percent25) {
-      pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
+    if (G.adcVal < Nvm.percent0) {
+      G.pwmVal = PWM_0;
+    }
+    else if (G.adcVal < Nvm.percent25) {
+      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
     }
     else if (G.adcVal < Nvm.percent50) {
-      pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
+      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
     }
     else if (G.adcVal < Nvm.percent75) {
-      pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
+      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
+    }
+    else if (G.adcVal < Nvm.percent100) {
+      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
     }
     else {
-      pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
+      G.pwmVal = PWM_100;
     }
 
 #ifdef FIX_PWM
-    pwmVal = FIX_PWM;
+    G.pwmVal = FIX_PWM;
 #endif
 
-    analogWrite (OUTPUT_PIN, pwmVal);
+    analogWrite (OUTPUT_PIN, G.pwmVal);
 
   }
 }
@@ -199,23 +208,23 @@ int cmdCalibrate (int argc, char **argv) {
   switch ( atoi (argv[1]) ) {
     case 0:
       Nvm.percent0 = G.adcVal;
-      Cli.xprintf ("0% : %u\n", Nvm.percent0);
+      Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
       break;
     case 25:
       Nvm.percent25 = G.adcVal;
-      Cli.xprintf ("25% : %u\n", Nvm.percent25);
+      Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
       break;
     case 50:
       Nvm.percent50 = G.adcVal;
-      Cli.xprintf ("50% : %u\n", Nvm.percent50);
+      Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
       break;
     case 75:
       Nvm.percent75 = G.adcVal;
-      Cli.xprintf ("75% : %u\n", Nvm.percent75);
+      Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
       break;
     case 100:
       Nvm.percent100 = G.adcVal;
-      Cli.xprintf ("100% : %u\n", Nvm.percent100);
+      Cli.xprintf ("100%% : %u\n", Nvm.percent100);
       break;
     default:
       return 1;
@@ -230,7 +239,8 @@ int cmdCalibrate (int argc, char **argv) {
  * CLI command for displaying the ADC reading
  */
 int cmdShow (int argc, char **argv) {
-  Cli.xprintf ("ADC reading: %u\n", G.adcVal);
+  Cli.xprintf ("ADC = %u\n", G.adcVal);
+  Cli.xprintf ("PWM = %u\n", G.pwmVal);
   Serial.println ("");
   return 0;
 }
@@ -241,15 +251,11 @@ int cmdShow (int argc, char **argv) {
  */
 int cmdRom (int argc, char **argv) {
   Cli.xprintf ("Calibration data:\n");
-  Cli.xprintf (" 0%   : %u\n", Nvm.percent0);
-  Cli.xprintf (" 25%  : %u\n", Nvm.percent25);
-  Cli.xprintf (" 50%  : %u\n", Nvm.percent50);
-  Cli.xprintf (" 75%  : %u\n", Nvm.percent75);
-  Cli.xprintf (" 100% : %u\n", Nvm.percent100);
+  Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
+  Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
+  Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
+  Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
+  Cli.xprintf ("100%% : %u\n", Nvm.percent100);
   Serial.println ("");
   return 0;
 }
-
-
-
-
