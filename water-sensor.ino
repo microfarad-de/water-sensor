@@ -194,18 +194,23 @@ int cmdCalibrate (int argc, char **argv) {
   switch ( atoi (argv[1]) ) {
     case 0:
       Nvm.percent0 = G.adcVal;
+      Cli.xprintf ("0% : %u\n", Nvm.percent0);
       break;
     case 25:
       Nvm.percent25 = G.adcVal;
+      Cli.xprintf ("25% : %u\n", Nvm.percent25);
       break;
     case 50:
       Nvm.percent50 = G.adcVal;
+      Cli.xprintf ("50% : %u\n", Nvm.percent50);
       break;
     case 75:
       Nvm.percent75 = G.adcVal;
+      Cli.xprintf ("75% : %u\n", Nvm.percent75);
       break;
     case 100:
       Nvm.percent100 = G.adcVal;
+      Cli.xprintf ("100% : %u\n", Nvm.percent100);
       break;
     default:
       return 1;
