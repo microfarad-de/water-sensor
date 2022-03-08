@@ -66,6 +66,7 @@
 #define PWM_75               95  // PWM setting for 75%
 #define PWM_100             127  // PWM setting for 100%
 #define ADC_MAX            1023  // Maximum ADC value
+//#define FIX_PWM        PWM_25  // Hardcode PWM output to a certain value (debug only)
 
 
 /*
@@ -161,6 +162,10 @@ void loop () {
     else {
       pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
     }
+
+#ifdef FIX_PWM
+    pwmVal = FIX_PWM;
+#endif
 
     analogWrite (OUTPUT_PIN, pwmVal);
 
