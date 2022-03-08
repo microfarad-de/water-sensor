@@ -95,7 +95,7 @@ void nvmRead      (void);
 void nvmWrite     (void);
 int  cmdCalibrate (int argc, char **argv);
 int  cmdShow      (int argc, char **argv);
-
+int  cmdRom       (int argc, char **argv);
 
 /*
  * Initialization routine
@@ -121,7 +121,8 @@ void setup () {
   Serial.println ("");
   Serial.println (F("'h' for help"));
   Cli.newCmd ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
-  Cli.newCmd ("show", "Show the calibration data"        , cmdShow);
+  Cli.newCmd ("s"   , "Show the ADC reading"             , cmdShow);
+  Cli.newCmd ("r"   , "Show the calibration data"        , cmdRom);
 
   // Initialize the ADC
   AdcPin_t adcPins[NUM_APINS] = {SENSOR_APIN};
@@ -216,10 +217,19 @@ int cmdCalibrate (int argc, char **argv) {
 
 
 /*
- * CLI command for displaying the calibration data
+ * CLI command for displaying the ADC reading
  */
 int cmdShow (int argc, char **argv) {
   Cli.xprintf ("ADC reading: %u\n", G.adcVal);
+  Serial.println ("");
+  return 0;
+}
+
+
+/*
+ * CLI command for displaying the calibration data
+ */
+int cmdRom (int argc, char **argv) {
   Cli.xprintf ("Calibration data:\n");
   Cli.xprintf (" 0%   : %u\n", Nvm.percent0);
   Cli.xprintf (" 25%  : %u\n", Nvm.percent25);
@@ -229,4 +239,7 @@ int cmdShow (int argc, char **argv) {
   Serial.println ("");
   return 0;
 }
+
+
+
 
