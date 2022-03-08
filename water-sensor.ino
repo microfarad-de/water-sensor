@@ -114,8 +114,8 @@ void setup () {
   pinMode (OUTPUT_PIN, OUTPUT);
   analogWrite (OUTPUT_PIN, 0);
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH); 
-  
+  digitalWrite(LED_BUILTIN, HIGH);
+
 
   // Initialize the command-line interface
   Cli.init ( SERIAL_BAUD );
@@ -191,7 +191,7 @@ void nvmRead (void) {
 
 
 /*
- * Write and validate EEPROM data
+ * Write EEPROM data
  */
 void nvmWrite (void) {
   eepromWrite (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
