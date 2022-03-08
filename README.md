@@ -1,4 +1,4 @@
-# Water Level Sensor
+# Water Level Sensor Adapter
 
 The current repository contains the Arduino firmware for the water level sensor adapter for the CBE PT622 digital display panel.
 
@@ -15,7 +15,7 @@ Unless stated otherwise within the source file headers, please feel free to use 
 
 ## Theory of Operation
 
-The water level sensor adapter enables the use of the CBE PT622 digital display panel with thirt party resistive water level sensors.
+The water level sensor adapter enables the use of the CBE PT622 digital display panel with third party resistive water level sensors.
 
 The original CBE water level sensors interface with the display panel via the following three wires:
 
