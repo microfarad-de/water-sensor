@@ -1,3 +1,12 @@
 [submodule "arduino-mk"]
 	path = arduino-mk
 	url = ssh://git@github.com/sudar/Arduino-Makefile
+[submodule "src/Adc"]
+	path = src/Adc
+	url = ssh://git@github.com/arduino-library/Adc
+[submodule "src/Cli"]
+	path = src/Cli
+	url = ssh://git@github.com/arduino-library/Cli
+[submodule "src/Nvm"]
+	path = src/Nvm
+	url = ssh://git@github.com/arduino-library/Nvm
