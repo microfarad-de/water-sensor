@@ -59,7 +59,7 @@
  * Configuration parameters
  */
 #define SERIAL_BAUD      115200  // Serial communication baud rate
-#define ADC_AVG_SAMPLES      16  // Number of ADC samples to be averaged
+#define ADC_AVG_SAMPLES       1  // Number of ADC samples to be averaged
 #define PWM_0                 0  // PWM setting for 0%
 #define PWM_25               63  // PWM setting for 25%
 #define PWM_50              127  // PWM setting for 50%
@@ -113,8 +113,8 @@ void setup () {
   // Iniialize pins
   pinMode (OUTPUT_PIN, OUTPUT);
   analogWrite (OUTPUT_PIN, 0);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  pinMode (LED_BUILTIN, OUTPUT);
+  digitalWrite (LED_BUILTIN, HIGH);
 
 
   // Initialize the command-line interface
@@ -127,6 +127,7 @@ void setup () {
   Serial.println (F("'h' for help"));
   Cli.newCmd ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
   Cli.newCmd ("s"   , "Show real time readings"          , cmdShow);
+  Cli.newCmd ("."   , ""                                 , cmdShow);
   Cli.newCmd ("r"   , "Show the calibration data"        , cmdRom);
 
   // Initialize the ADC
@@ -208,23 +209,23 @@ int cmdCalibrate (int argc, char **argv) {
   switch ( atoi (argv[1]) ) {
     case 0:
       Nvm.percent0 = G.adcVal;
-      Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
+      Cli.xprintf ("0%%   : %u\n\n", Nvm.percent0);
       break;
     case 25:
       Nvm.percent25 = G.adcVal;
-      Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
+      Cli.xprintf ("25%%  : %u\n\n", Nvm.percent25);
       break;
     case 50:
       Nvm.percent50 = G.adcVal;
-      Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
+      Cli.xprintf ("50%%  : %u\n\n", Nvm.percent50);
       break;
     case 75:
       Nvm.percent75 = G.adcVal;
-      Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
+      Cli.xprintf ("75%%  : %u\n\n", Nvm.percent75);
       break;
     case 100:
       Nvm.percent100 = G.adcVal;
-      Cli.xprintf ("100%% : %u\n", Nvm.percent100);
+      Cli.xprintf ("100%% : %u\n\n", Nvm.percent100);
       break;
     default:
       return 1;
