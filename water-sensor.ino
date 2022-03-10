@@ -53,6 +53,7 @@
 #define NUM_APINS          1  // Number of analog pins in use
 #define SENSOR_APIN ADC_PIN0  // Analog pin connected to the water level sensor
 #define OUTPUT_PIN         9  // PWM pin controlling the gate of the power MOSFET
+#define SENSOR_ENABLE_PIN  8  // Digital pin that enables the sensor electrodes
 
 
 /*
@@ -73,8 +74,11 @@
  * Global variables
  */
 struct {
-  uint16_t adcVal = 0; // ADC reading value
-  uint8_t  pwmVal = 0; // PWM setting
+  uint32_t ts            = 0;      // Timestamp for measuring time duration
+  uint16_t adcVal        = 0;      // ADC reading value
+  uint8_t  pwmVal        = 0;      // PWM setting
+  bool     adcWorking    = false;  // ADC conversion ongoing
+  bool     sensorEnabled = false;  // Sensor electrodes enabled
 } G;
 
 
@@ -103,39 +107,38 @@ int  cmdRom       (int argc, char **argv);
  * Initialization routine
  */
 void setup () {
-  MCUSR = 0;      // clear MCU status register
+  MCUSR = 0;  // clear MCU status register
 
   // Initialize the Timer 1 PWM frequency for pins 9 and 10
   // see https://etechnophiles.com/change-frequency-pwm-pins-arduino-uno/
   // see ATmega328P datasheet Section 20.14.2, Table 20-7
   TCCR1B = (TCCR1B & B11111000) | B00000001; // For PWM frequency of 31250Hz (using 16MHz crystal)
 
-  // Iniialize pins
-  pinMode (OUTPUT_PIN, OUTPUT);
-  analogWrite (OUTPUT_PIN, 0);
-  pinMode (LED_BUILTIN, OUTPUT);
+  pinMode      (OUTPUT_PIN, OUTPUT);
+  analogWrite  (OUTPUT_PIN, 0);
+  pinMode      (SENSOR_ENABLE_PIN, OUTPUT);
+  digitalWrite (SENSOR_ENABLE_PIN, LOW);
+  pinMode      (LED_BUILTIN, OUTPUT);
   digitalWrite (LED_BUILTIN, HIGH);
 
-
-  // Initialize the command-line interface
   Cli.init ( SERIAL_BAUD );
   Serial.println ("");
   Serial.println (F("+ + +  W A T E R  S E N S O R  + + +"));
   Serial.println ("");
-  Cli.xprintf ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
+  Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
   Serial.println (F("'h' for help"));
-  Cli.newCmd ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
-  Cli.newCmd ("s"   , "Show real time readings"          , cmdShow);
-  Cli.newCmd ("."   , ""                                 , cmdShow);
-  Cli.newCmd ("r"   , "Show the calibration data"        , cmdRom);
+  Cli.newCmd     ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
+  Cli.newCmd     ("s"   , "Show real time readings"          , cmdShow);
+  Cli.newCmd     ("."   , ""                                 , cmdShow);
+  Cli.newCmd     ("r"   , "Show the calibration data"        , cmdRom);
 
-  // Initialize the ADC
   AdcPin_t adcPins[NUM_APINS] = {SENSOR_APIN};
   Adc.initialize (ADC_PRESCALER_128, ADC_DEFAULT, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
 
-  // Read the EEPROM data
   nvmRead ();
+
+  G.ts = millis ();
 }
 
 
@@ -143,42 +146,59 @@ void setup () {
  * Main loop
  */
 void loop () {
+  int16_t  adcVal;
+  uint32_t t = millis ();
 
-  // Command-line interpreter
   Cli.getCmd ();
 
-  // Read the ADC
-  if ( Adc.readAll () ) {
+  if (t - G.ts > 200 && !G.sensorEnabled) {
+    // Start charging the capacitor
+    digitalWrite (SENSOR_ENABLE_PIN, HIGH);
+    G.sensorEnabled = true;
+  }
+  else if (t - G.ts > 300 && !G.adcWorking) {
+    // Start ADC conversion
+    Adc.start (SENSOR_APIN);
+    G.adcWorking = true;
+  }
+  else if (G.adcWorking) {
+    // Measure the voltage across the capacitor
+    adcVal = Adc.readVal ();
 
-    // The lower the water level, the larger the ADC value.
-    // Thus, we invert the slope by subtracting from ADC_MAX.
-    G.adcVal = ADC_MAX - (uint16_t)Adc.result[SENSOR_APIN];
+    if ( adcVal >= 0 ) {
+      // The lower the water level, the larger the ADC value.
+      // Thus, we invert the slope by subtracting from ADC_MAX.
+      G.adcVal = ADC_MAX - (uint16_t)adcVal;
 
-    if (G.adcVal < Nvm.percent0) {
-      G.pwmVal = PWM_0;
-    }
-    else if (G.adcVal < Nvm.percent25) {
-      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
-    }
-    else if (G.adcVal < Nvm.percent50) {
-      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
-    }
-    else if (G.adcVal < Nvm.percent75) {
-      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
-    }
-    else if (G.adcVal < Nvm.percent100) {
-      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
-    }
-    else {
-      G.pwmVal = PWM_100;
-    }
+      if (G.adcVal < Nvm.percent0) {
+        G.pwmVal = PWM_0;
+      }
+      else if (G.adcVal < Nvm.percent25) {
+        G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
+      }
+      else if (G.adcVal < Nvm.percent50) {
+        G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
+      }
+      else if (G.adcVal < Nvm.percent75) {
+        G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
+      }
+      else if (G.adcVal < Nvm.percent100) {
+        G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
+      }
+      else {
+        G.pwmVal = PWM_100;
+      }
 
-#ifdef FIX_PWM
-    G.pwmVal = FIX_PWM;
-#endif
+  #ifdef FIX_PWM
+      G.pwmVal = FIX_PWM;
+  #endif
 
-    analogWrite (OUTPUT_PIN, G.pwmVal);
-
+      analogWrite  (OUTPUT_PIN, G.pwmVal);
+      digitalWrite (SENSOR_ENABLE_PIN, LOW);
+      G.adcWorking    = false;
+      G.sensorEnabled = false;
+      G.ts         = t;
+    }
   }
 }
 

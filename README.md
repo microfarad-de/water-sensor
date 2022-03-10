@@ -1,6 +1,6 @@
-# Water Level Sensor Adapter
+# Water Level Sensor
 
-The current repository contains the Arduino firmware for the water level sensor adapter for the CBE PT622 digital display panel.
+This repository contains the Arduino firmware for a capacitive water level sensor for the CBE PT622 digital display panel.
 
 The code has been implemented and tested on an Arduino Pro Mini clone board based on the ATmega328P microcontroller.
 
@@ -15,19 +15,17 @@ Unless stated otherwise within the source file headers, please feel free to use 
 
 ## Theory of Operation
 
-The water level sensor adapter enables the use of the CBE PT622 digital display panel with third party resistive water level sensors.
+This circuit measures the capacitance between two metal rod electrodes partially immersed into the water tank. Whereas the measured capacitance increases with increasing water level.
 
-The original CBE water level sensors interface with the display panel via the following three wires:
+The sensor sends electric current pulses of predefined duration through the electrode pair in series with a current limiting resistor, then measures the resulting voltage drop across the electrodes. The herewith formed capacitor is discharged after each pulse by connecting the positive electrode  to the ground.
+
+The sensor is connected to the CBE PT622 display panel via the following three terminals:
 
 * Ground
 * +5 V
 * Signal (0 V .. 2.5 V)
 
 The level is signalled via the signal voltage ranging from 0 V (empty tank) to 2.5 V (full tank).
-
-A resistive water level sensor consists of two metal electrodes that are submerged into the water tank. Whereas the part of the electrode surface that is submerged increases with increasing water level. Thus, the resistance betwee both electrodes is inversely proportional to the water level.
-
-The adapter measures the resistance between the electrodes and produces a signal voltage that is compatible with the CBE display panel.
 
 ## Circuit Diagram
 
