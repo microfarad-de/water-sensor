@@ -1,5 +1,5 @@
 /*
- * Water Level Sensor Adapter
+ * Water Level Sensor
  *
  * The water level sensor for the use of the CBE PT622 digital display panel.
  *
