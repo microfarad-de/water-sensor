@@ -189,9 +189,9 @@ void loop () {
         G.pwmVal = PWM_100;
       }
 
-  #ifdef FIX_PWM
+#ifdef FIX_PWM
       G.pwmVal = FIX_PWM;
-  #endif
+#endif
 
       analogWrite  (OUTPUT_PIN, G.pwmVal);
       digitalWrite (SENSOR_ENABLE_PIN, LOW);
