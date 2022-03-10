@@ -1,8 +1,7 @@
 /*
  * Water Level Sensor Adapter
  *
- * The water level sensor adapter enables the use of the CBE PT622 digital display panel with
- * third party resistive water level sensors.
+ * The water level sensor for the use of the CBE PT622 digital display panel.
  *
  * This sketch has been implemented and tested on an ATMega328P based Arduino Pro Mini
  * compatible board running on 3.3V/8MHz.
