@@ -197,7 +197,7 @@ void loop () {
       digitalWrite (SENSOR_ENABLE_PIN, LOW);
       G.adcWorking    = false;
       G.sensorEnabled = false;
-      G.ts         = t;
+      G.ts            = t;
     }
   }
 }
