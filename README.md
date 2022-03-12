@@ -8,6 +8,14 @@ This project uses Git submodules. In order to get its full source code, please c
 
 Unless stated otherwise within the source file headers, please feel free to use and distribute this code under the GNU General Public License v3.0.
 
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpeg" alt="drawing" width="400"/>
+</p>
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpeg" alt="drawing" width="400"/>
+</p>
+
+
 ## Prerequisites
 
 * ATmega328P based Arduino Pro Mini, Arduino Nano or similar model
