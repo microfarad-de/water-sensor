@@ -43,7 +43,7 @@ Following is the water sensor circuit diagraom:
 <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.png" alt="drawing" width="600"/>
 </p>
 
-[water-sensor-schematic.pdf](https://github.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.pdf)
+[water-sensor-schematic.pdf](https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.pdf)
 
 ## PCB Layout
 
