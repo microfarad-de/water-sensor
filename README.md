@@ -29,13 +29,17 @@ The level is signalled via the signal voltage ranging from 0 V (empty tank) to 2
 
 ## Circuit Diagram
 
-The water sensor circuit diagram can be found under the following link:
+Following is the water sensor circuit diagraom:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.png" alt="drawing" width="600"/>
+</p>
 
 [water-sensor-schematic.pdf](https://github.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.pdf)
 
 ## PCB Layout
 
-The water sensor components have been fitted on a prototyping board as shown in the following pictures.
+The water sensor components have been fitted on a prototyping board as shown in the following pictures:
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/pcb-front.jpeg" alt="drawing" width="400"/>
