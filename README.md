@@ -58,3 +58,17 @@ The water sensor components have been fitted on a prototyping board as shown in 
 </p>
 
 
+## Gallery
+
+Waveform across the electrodes:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/probe-waveform.png" alt="drawing" width="600"/>
+</p>
+
+Test setup:
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/test-setup.jpeg" alt="drawing" width="600"/>
+</p>
+
