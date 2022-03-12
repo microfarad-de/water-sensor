@@ -1,5 +1,10 @@
 # Water Level Sensor
 
+<p align="center">
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpeg" alt="drawing" width="400"/>
+<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpeg" alt="drawing" width="400"/>
+</p>
+
 This repository contains the Arduino firmware for a capacitive water level sensor for the CBE PT622 digital display panel.
 
 The code has been implemented and tested on an Arduino Pro Mini clone board based on the ATmega328P microcontroller.
@@ -8,12 +13,7 @@ This project uses Git submodules. In order to get its full source code, please c
 
 Unless stated otherwise within the source file headers, please feel free to use and distribute this code under the GNU General Public License v3.0.
 
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpeg" alt="drawing" width="400"/>
-</p>
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpeg" alt="drawing" width="400"/>
-</p>
+
 
 
 ## Prerequisites
