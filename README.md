@@ -29,4 +29,4 @@ The level is signalled via the signal voltage ranging from 0 V (empty tank) to 2
 
 ## Circuit Diagram
 
-TBD
+[water-sensor-schematic.pdf](https://github.com/microfarad-de/water-sensor/doc/water-sensor-schematic.pdf)
