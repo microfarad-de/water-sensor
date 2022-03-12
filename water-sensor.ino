@@ -50,9 +50,9 @@
  * Pin assignment
  */
 #define NUM_APINS          1  // Number of analog pins in use
-#define SENSOR_APIN ADC_PIN0  // Analog pin connected to the water level sensor
+#define SENSOR_APIN ADC_PIN3  // Analog pin connected to the water level sensor
 #define OUTPUT_PIN         9  // PWM pin controlling the gate of the power MOSFET
-#define SENSOR_ENABLE_PIN  8  // Digital pin that enables the sensor electrodes
+#define SENSOR_ENABLE_PIN 11  // Digital pin that enables the sensor electrodes
 
 
 /*
@@ -150,12 +150,12 @@ void loop () {
 
   Cli.getCmd ();
 
-  if (t - G.ts > 200 && !G.sensorEnabled) {
+  if (t - G.ts > 175 && !G.sensorEnabled) {
     // Start charging the capacitor
     digitalWrite (SENSOR_ENABLE_PIN, HIGH);
     G.sensorEnabled = true;
   }
-  else if (t - G.ts > 300 && !G.adcWorking) {
+  else if (t - G.ts > 200 && !G.adcWorking) {
     // Start ADC conversion
     Adc.start (SENSOR_APIN);
     G.adcWorking = true;

@@ -23,6 +23,7 @@
         "type_traits": "cpp",
         "vector": "cpp",
         "array": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "cstdarg": "cpp"
     }
 }
