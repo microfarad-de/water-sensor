@@ -66,7 +66,7 @@
 #define PWM_75              191  // PWM setting for 75%
 #define PWM_100             255  // PWM setting for 100%
 #define ADC_MAX            1023  // Maximum ADC value
-//#define FIX_PWM        PWM_75  // Hardcode PWM output to a certain value (debug only)
+//#define FIX_PWM       PWM_100  // Hardcode PWM output to a certain value (debug only)
 
 
 /*
@@ -127,10 +127,10 @@ void setup () {
   Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
   Serial.println (F("'h' for help"));
-  Cli.newCmd     ("cal" , "Calibrate (arg: [0|25|50|75|100])", cmdCalibrate);
-  Cli.newCmd     ("s"   , "Show real time readings"          , cmdShow);
-  Cli.newCmd     ("."   , ""                                 , cmdShow);
-  Cli.newCmd     ("r"   , "Show the calibration data"        , cmdRom);
+  Cli.newCmd     ("cal" , "Calibrate (arg: <0|25|50|75|100> [value])", cmdCalibrate);
+  Cli.newCmd     ("s"   , "Show real time readings"                  , cmdShow);
+  Cli.newCmd     ("."   , ""                                         , cmdShow);
+  Cli.newCmd     ("r"   , "Show the calibration data"                , cmdRom);
 
   AdcPin_t adcPins[NUM_APINS] = {SENSOR_APIN};
   Adc.initialize (ADC_PRESCALER_128, ADC_DEFAULT, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
@@ -223,27 +223,30 @@ void nvmWrite (void) {
  * argv[1]: water level in %
  */
 int cmdCalibrate (int argc, char **argv) {
-  if (argc != 2) return 1;
+  uint16_t val;
+  if      (argc == 2) val = G.adcVal;
+  else if (argc == 3) val = atoi(argv[2]);
+  else                return 1;
 
   switch ( atoi (argv[1]) ) {
     case 0:
-      Nvm.percent0 = G.adcVal;
+      Nvm.percent0 = val;
       Cli.xprintf ("0%%   : %u\n\n", Nvm.percent0);
       break;
     case 25:
-      Nvm.percent25 = G.adcVal;
+      Nvm.percent25 = val;
       Cli.xprintf ("25%%  : %u\n\n", Nvm.percent25);
       break;
     case 50:
-      Nvm.percent50 = G.adcVal;
+      Nvm.percent50 = val;
       Cli.xprintf ("50%%  : %u\n\n", Nvm.percent50);
       break;
     case 75:
-      Nvm.percent75 = G.adcVal;
+      Nvm.percent75 = val;
       Cli.xprintf ("75%%  : %u\n\n", Nvm.percent75);
       break;
     case 100:
-      Nvm.percent100 = G.adcVal;
+      Nvm.percent100 = val;
       Cli.xprintf ("100%% : %u\n\n", Nvm.percent100);
       break;
     default:
