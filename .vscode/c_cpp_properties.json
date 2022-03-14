@@ -2,6 +2,9 @@
     "configurations": [
         {
             "name": "Mac",
+            "defines": [
+                "__AVR_ATmega328P__"
+            ],
             "includePath": [
                 "${workspaceFolder}/**",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/avr/include/**",
@@ -9,7 +12,6 @@
                 "/Applications/Arduino.app/Contents/Java/hardware/arduino/avr/variants/standard/**",
                 "/Applications/Arduino.app/Contents/Java/hardware/tools/avr/avr/include/avr/**"
             ],
-            "defines": [],
             "macFrameworkPath": [
                 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"
             ],
