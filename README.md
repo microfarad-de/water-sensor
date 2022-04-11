@@ -4,7 +4,7 @@
 **NOTE**
 
 The implementation described in the repository is still work in progress. The water level sensor is not fully accurate. 
-One improvement suggestion is to isolate one of the sensor electrodes using a dielectrict material and reduce the value of resistor R1 accordingly. 
+One improvement suggestion is to isolate one of the sensor electrodes using a dielectric material and reduce the value of resistor R1 accordingly. 
 
 ---
 
