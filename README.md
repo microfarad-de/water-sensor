@@ -1,5 +1,13 @@
 # Water Level Sensor
 
+---
+**NOTE**
+
+The implementation described in the repository is still work in progress. The water level sensor is not fully accurate. 
+One improvement suggestion is to isolate one of the sensor electrodes using a dielectrict material and reduce the value of resistor R1 accordingly. 
+
+---
+
 <p align="center">
 <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpeg" alt="drawing" width="400"/>
 <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpeg" alt="drawing" width="400"/>
