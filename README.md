@@ -8,7 +8,6 @@ This project uses Git submodules. In order to get its full source code, please c
 
 Unless stated otherwise within the source file headers, please feel free to use and distribute this code under the GNU General Public License v3.0.
 
-
 ## Prerequisites
 
 * ATmega328P based Arduino Pro Mini, Arduino Nano or similar model
@@ -44,4 +43,12 @@ The output voltage is proportional to the sensor resistance value, whereas the f
 * Full tank: 180 Ohm -> 2.5 V
 
 
+## Gallery
 
+ <p align="center">
+ <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpg" alt="drawing" width="600"/>
+ </p>
+
+ <p align="center">
+ <img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpg" alt="drawing" width="600"/>
+ </p>
