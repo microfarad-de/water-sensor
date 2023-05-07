@@ -3,7 +3,7 @@
  *
  * Adapts the CBE PT622 digital display panel to standard 10-180 Ohm water level probes.
  *
- * Measures the probe's variable resistances and outputs a voltage range of 0 to 2.5 V.
+ * Measures the probe's variable resistance and outputs a voltage range of 0 to 2.5 V.
  *
  * Empty tank:  10 Ohm ->   0 V
  * Full tank:  180 Ohm -> 2.5 V
