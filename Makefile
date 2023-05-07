@@ -48,3 +48,12 @@ USER_LIB_PATH = src
 ARDUINO_LIBS = Adc Cli Nvm EEPROM
 
 include ${ARDMK_DIR}/Arduino.mk
+
+release: clean
+	./release.sh
+.PHONY: release
+
+clean::
+	./release.sh clean
+.PHONY: clean
+

@@ -1,7 +1,12 @@
 /*
- * Water Level Sensor
+ * Water Level Sensor Adapter
  *
- * The water level sensor for the use of the CBE PT622 digital display panel.
+ * Adapts the CBE PT622 digital display panel to standard 10-180 Ohm water level probes.
+ *
+ * Measures the probe's variable resistances and outputs a voltage range of 0 to 2.5 V.
+ *
+ * Empty tank:  10 Ohm ->   0 V
+ * Full tank:  180 Ohm -> 2.5 V
  *
  * This sketch has been implemented and tested on an ATMega328P based Arduino Pro Mini
  * compatible board running on 3.3V/8MHz.
@@ -50,9 +55,8 @@
  * Pin assignment
  */
 #define NUM_APINS          1  // Number of analog pins in use
-#define SENSOR_APIN ADC_PIN3  // Analog pin connected to the water level sensor
+#define SENSOR_APIN ADC_PIN0  // Analog pin connected to the water level sensor
 #define OUTPUT_PIN         9  // PWM pin controlling the gate of the power MOSFET
-#define SENSOR_ENABLE_PIN 11  // Digital pin that enables the sensor electrodes
 
 
 /*
@@ -66,18 +70,13 @@
 #define PWM_75              191  // PWM setting for 75%
 #define PWM_100             255  // PWM setting for 100%
 #define ADC_MAX            1023  // Maximum ADC value
-//#define FIX_PWM       PWM_100  // Hardcode PWM output to a certain value (debug only)
-
 
 /*
  * Global variables
  */
 struct {
-  uint32_t ts            = 0;      // Timestamp for measuring time duration
   uint16_t adcVal        = 0;      // ADC reading value
   uint8_t  pwmVal        = 0;      // PWM setting
-  bool     adcWorking    = false;  // ADC conversion ongoing
-  bool     sensorEnabled = false;  // Sensor electrodes enabled
 } G;
 
 
@@ -115,14 +114,12 @@ void setup () {
 
   pinMode      (OUTPUT_PIN, OUTPUT);
   analogWrite  (OUTPUT_PIN, 0);
-  pinMode      (SENSOR_ENABLE_PIN, OUTPUT);
-  digitalWrite (SENSOR_ENABLE_PIN, LOW);
   pinMode      (LED_BUILTIN, OUTPUT);
   digitalWrite (LED_BUILTIN, HIGH);
 
   Cli.init ( SERIAL_BAUD );
   Serial.println ("");
-  Serial.println (F("+ + +  W A T E R  S E N S O R  + + +"));
+  Serial.println (F("+ + +  W A T E R  S E N S O R  A D A P T E R  + + +"));
   Serial.println ("");
   Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
@@ -131,13 +128,12 @@ void setup () {
   Cli.newCmd     ("s"   , "Show real time readings"                  , cmdShow);
   Cli.newCmd     ("."   , ""                                         , cmdShow);
   Cli.newCmd     ("r"   , "Show the calibration data"                , cmdRom);
+  Cli.showHelp ();
 
   AdcPin_t adcPins[NUM_APINS] = {SENSOR_APIN};
-  Adc.initialize (ADC_PRESCALER_128, ADC_DEFAULT, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
+  Adc.initialize (ADC_PRESCALER_128, ADC_INTERNAL, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
 
   nvmRead ();
-
-  G.ts = millis ();
 }
 
 
@@ -145,61 +141,36 @@ void setup () {
  * Main loop
  */
 void loop () {
-  int16_t  adcVal;
-  uint32_t t = millis ();
 
   Cli.getCmd ();
 
-  if (t - G.ts > 175 && !G.sensorEnabled) {
-    // Start charging the capacitor
-    digitalWrite (SENSOR_ENABLE_PIN, HIGH);
-    G.sensorEnabled = true;
-  }
-  else if (t - G.ts > 200 && !G.adcWorking) {
-    // Start ADC conversion
-    Adc.start (SENSOR_APIN);
-    G.adcWorking = true;
-  }
-  else if (G.adcWorking) {
-    // Measure the voltage across the capacitor
-    adcVal = Adc.readVal ();
+  if ( Adc.readAll () == true ) {
 
-    if ( adcVal >= 0 ) {
-      // The lower the water level, the larger the ADC value.
-      // Thus, we invert the slope by subtracting from ADC_MAX.
-      G.adcVal = ADC_MAX - (uint16_t)adcVal;
+    G.adcVal = Adc.result[SENSOR_APIN];
 
-      if (G.adcVal < Nvm.percent0) {
-        G.pwmVal = PWM_0;
-      }
-      else if (G.adcVal < Nvm.percent25) {
-        G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
-      }
-      else if (G.adcVal < Nvm.percent50) {
-        G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
-      }
-      else if (G.adcVal < Nvm.percent75) {
-        G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
-      }
-      else if (G.adcVal < Nvm.percent100) {
-        G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
-      }
-      else {
-        G.pwmVal = PWM_100;
-      }
-
-#ifdef FIX_PWM
-      G.pwmVal = FIX_PWM;
-#endif
-
-      analogWrite  (OUTPUT_PIN, G.pwmVal);
-      digitalWrite (SENSOR_ENABLE_PIN, LOW);
-      G.adcWorking    = false;
-      G.sensorEnabled = false;
-      G.ts            = t;
+    if (G.adcVal < Nvm.percent0) {
+      G.pwmVal = PWM_0;
     }
+    else if (G.adcVal < Nvm.percent25) {
+      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
+    }
+    else if (G.adcVal < Nvm.percent50) {
+      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
+    }
+    else if (G.adcVal < Nvm.percent75) {
+      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
+    }
+    else if (G.adcVal < Nvm.percent100) {
+      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
+    }
+    else {
+      G.pwmVal = PWM_100;
+    }
+
+    analogWrite  (OUTPUT_PIN, G.pwmVal);
   }
 }
+
 
 
 /*
@@ -207,6 +178,11 @@ void loop () {
  */
 void nvmRead (void) {
   eepromRead (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
+  if (Nvm.percent0   > ADC_MAX) Nvm.percent0   = 100, nvmWrite();
+  if (Nvm.percent25  > ADC_MAX) Nvm.percent25  = 250, nvmWrite();
+  if (Nvm.percent50  > ADC_MAX) Nvm.percent50  = 500, nvmWrite();
+  if (Nvm.percent75  > ADC_MAX) Nvm.percent75  = 750, nvmWrite();
+  if (Nvm.percent100 > ADC_MAX) Nvm.percent100 = 900, nvmWrite();
 }
 
 

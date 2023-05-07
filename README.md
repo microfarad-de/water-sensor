@@ -1,27 +1,12 @@
-# Water Level Sensor
+# Water Level Sensor Adapter
 
----
-**NOTE**
-
-The implementation described in the repository is still work in progress. The water level sensor is not fully accurate. 
-One improvement suggestion is to isolate one of the sensor electrodes using a dielectric material and reduce the value of resistor R1 accordingly. 
-
----
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-1.jpeg" alt="drawing" width="400"/>
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/perspective-2.jpeg" alt="drawing" width="400"/>
-</p>
-
-This repository contains the Arduino firmware for a capacitive water level sensor for the CBE PT622 digital display panel.
+Arduino firmware for adapting the CBE PT622 digital display panel to standard 10-180 Ohm water level probes. Measures the probe's variable resistances and outputs a voltage range of 0 to 2.5 V.
 
 The code has been implemented and tested on an Arduino Pro Mini clone board based on the ATmega328P microcontroller.
 
 This project uses Git submodules. In order to get its full source code, please clone this Git repository to your local workspace, then execute the follwoing command from within the repository's root directory: `git submodule update --init`.
 
 Unless stated otherwise within the source file headers, please feel free to use and distribute this code under the GNU General Public License v3.0.
-
-
 
 
 ## Prerequisites
@@ -31,17 +16,17 @@ Unless stated otherwise within the source file headers, please feel free to use 
 
 ## Theory of Operation
 
-This circuit measures the capacitance between two metal rod electrodes partially immersed into the water tank. Whereas the measured capacitance increases with increasing water level.
+This circuit converts the standard water level probe variable resistance value of 10-180 Ohm to a variable voltage value with the range of 0 to 2.5 V. Whereas this output voltage value is proportional to the input resistance value.
 
-The sensor sends electric current pulses of predefined duration through the electrode pair in series with a current limiting resistor, then measures the resulting voltage drop across the electrodes. The herewith formed capacitor is discharged after each pulse by connecting the positive electrode  to the ground.
+The connection wire harness consists of the following wires:
+* Red: Connect to the PT622 +5V probe power supply
+* Black: Connect to the PT622 probe ground as well as the 10-180 Ohm probe ground
+* Green: Connect to the PT622 probe variable voltage (0-2.5 V)
+* Blue: Connect to the 10-180 Ohm probe output
 
-The sensor is connected to the CBE PT622 display panel via the following three terminals:
-
-* Ground
-* +5 V
-* Signal (0 V .. 2.5 V)
-
-The level is signalled via the signal voltage ranging from 0 V (empty tank) to 2.5 V (full tank).
+The output voltage is proportional to the probe resistance value, whereas the following applies:
+* Empty tank: 10 Ohm -> 0 V
+* Full tank: 180 Ohm -> 2.5 V
 
 ## Circuit Diagram
 
@@ -53,30 +38,4 @@ Following is the water sensor circuit diagraom:
 
 [water-sensor-schematic.pdf](https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/water-sensor-schematic.pdf)
 
-## PCB Layout
-
-The water sensor components have been fitted on a prototyping board as shown in the following pictures:
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/pcb-front.jpeg" alt="drawing" width="400"/>
-</p>
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/pcb-back.jpeg" alt="drawing" width="400"/>
-</p>
-
-
-## Gallery
-
-Waveform across the probe electrodes:
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/probe-waveform.png" alt="drawing" width="600"/>
-</p>
-
-Test setup:
-
-<p align="center">
-<img src="https://raw.githubusercontent.com/microfarad-de/water-sensor/master/doc/test-setup.jpeg" alt="drawing" width="600"/>
-</p>
 
