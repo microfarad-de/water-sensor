@@ -184,19 +184,19 @@ bool nvmValidate (void) {
   bool valid = true;
 
   if (Nvm.percent0   > ADC_MAX || Nvm.percent0  >= Nvm.percent25)  {
-    Nvm.percent0   = 100; valid = false;
+    Nvm.percent0   = 4; valid = false;
   }
   if (Nvm.percent25  > ADC_MAX || Nvm.percent25 >= Nvm.percent50 || Nvm.percent25 <= Nvm.percent0) {
-    Nvm.percent25  = 250; valid = false;
+    Nvm.percent25  = 58; valid = false;
   }
   if (Nvm.percent50  > ADC_MAX || Nvm.percent50 >= Nvm.percent75 || Nvm.percent50 <= Nvm.percent25) {
-    Nvm.percent50  = 500; valid = false;
+    Nvm.percent50  = 100; valid = false;
   }
   if (Nvm.percent75  > ADC_MAX || Nvm.percent75 >= Nvm.percent100 || Nvm.percent75 <= Nvm.percent50) {
-    Nvm.percent75  = 750; valid = false;
+    Nvm.percent75  = 166; valid = false;
   }
   if (Nvm.percent100 > ADC_MAX || Nvm.percent100 <= Nvm.percent75) {
-    Nvm.percent100 = 900; valid = false;
+    Nvm.percent100 = 188; valid = false;
   }
   if (Nvm.pwm0   > PWM_MAX || Nvm.pwm0  >= Nvm.pwm25) {
     Nvm.pwm0   = 0; valid = false;
