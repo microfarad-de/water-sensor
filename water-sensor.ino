@@ -64,11 +64,7 @@
  */
 #define SERIAL_BAUD      115200  // Serial communication baud rate
 #define ADC_AVG_SAMPLES       1  // Number of ADC samples to be averaged
-#define PWM_0                 0  // PWM setting for 0%
-#define PWM_25               63  // PWM setting for 25%
-#define PWM_50              127  // PWM setting for 50%
-#define PWM_75              191  // PWM setting for 75%
-#define PWM_100             255  // PWM setting for 100%
+#define PWM_MAX             255  // Maximum PWM setting
 #define ADC_MAX            1023  // Maximum ADC value
 
 /*
@@ -89,17 +85,25 @@ struct {
   uint16_t percent50;    // ADC reading for 50%
   uint16_t percent75;    // ADC reading for 75%
   uint16_t percent100;   // ADC reading for 100%
+  uint16_t pwm0;         // PWM setting for 0%
+  uint16_t pwm25;        // PWM setting for 25%
+  uint16_t pwm50;        // PWM setting for 50%
+  uint16_t pwm75;        // PWM setting for 75%
+  uint16_t pwm100;       // PWM setting for 100%
+
 } Nvm;
 
 
 /*
  * Function declarations
  */
-void nvmRead      (void);
-void nvmWrite     (void);
-int  cmdCalibrate (int argc, char **argv);
-int  cmdShow      (int argc, char **argv);
-int  cmdRom       (int argc, char **argv);
+bool nvmValidate     (void);
+void nvmRead         (void);
+void nvmWrite        (void);
+int  cmdCalibrate    (int argc, char **argv);
+int  cmdCalibratePwm (int argc, char **argv);
+int  cmdShow         (int argc, char **argv);
+int  cmdRom          (int argc, char **argv);
 
 /*
  * Initialization routine
@@ -124,14 +128,15 @@ void setup () {
   Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
   Serial.println (F("'h' for help"));
-  Cli.newCmd     ("cal" , "Calibrate (arg: <0|25|50|75|100> [value])", cmdCalibrate);
+  Cli.newCmd     ("cal" , "Calibrate sensor (arg: <0|25|50|75|100> [value])", cmdCalibrate);
+  Cli.newCmd     ("pwm" , "Calibrate output (arg: <0|25|50|75|100> <value>)", cmdCalibratePwm);
   Cli.newCmd     ("s"   , "Show real time readings"                  , cmdShow);
   Cli.newCmd     ("."   , ""                                         , cmdShow);
   Cli.newCmd     ("r"   , "Show the calibration data"                , cmdRom);
   Cli.showHelp ();
 
   AdcPin_t adcPins[NUM_APINS] = {SENSOR_APIN};
-  Adc.initialize (ADC_PRESCALER_128, ADC_INTERNAL, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
+  Adc.initialize (ADC_PRESCALER_128, ADC_DEFAULT, ADC_AVG_SAMPLES, NUM_APINS, adcPins);
 
   nvmRead ();
 }
@@ -149,22 +154,22 @@ void loop () {
     G.adcVal = Adc.result[SENSOR_APIN];
 
     if (G.adcVal < Nvm.percent0) {
-      G.pwmVal = PWM_0;
+      G.pwmVal = Nvm.pwm0;
     }
     else if (G.adcVal < Nvm.percent25) {
-      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, PWM_0, PWM_25);
+      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, Nvm.pwm0, Nvm.pwm25);
     }
     else if (G.adcVal < Nvm.percent50) {
-      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, PWM_25, PWM_50);
+      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, Nvm.pwm25, Nvm.pwm50);
     }
     else if (G.adcVal < Nvm.percent75) {
-      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, PWM_50, PWM_75);
+      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, Nvm.pwm50, Nvm.pwm75);
     }
     else if (G.adcVal < Nvm.percent100) {
-      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, PWM_75, PWM_100);
+      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, Nvm.pwm75, Nvm.pwm100);
     }
     else {
-      G.pwmVal = PWM_100;
+      G.pwmVal = Nvm.pwm100;
     }
 
     analogWrite  (OUTPUT_PIN, G.pwmVal);
@@ -172,17 +177,57 @@ void loop () {
 }
 
 
+/*
+ * Validate EEPROM data
+ */
+bool nvmValidate (void) {
+  bool valid = true;
+
+  if (Nvm.percent0   > ADC_MAX || Nvm.percent0  >= Nvm.percent25)  {
+    Nvm.percent0   = 100; valid = false;
+  }
+  if (Nvm.percent25  > ADC_MAX || Nvm.percent25 >= Nvm.percent50 || Nvm.percent25 <= Nvm.percent0) {
+    Nvm.percent25  = 250; valid = false;
+  }
+  if (Nvm.percent50  > ADC_MAX || Nvm.percent50 >= Nvm.percent75 || Nvm.percent50 <= Nvm.percent25) {
+    Nvm.percent50  = 500; valid = false;
+  }
+  if (Nvm.percent75  > ADC_MAX || Nvm.percent75 >= Nvm.percent100 || Nvm.percent75 <= Nvm.percent50) {
+    Nvm.percent75  = 750; valid = false;
+  }
+  if (Nvm.percent100 > ADC_MAX || Nvm.percent100 <= Nvm.percent75) {
+    Nvm.percent100 = 900; valid = false;
+  }
+  if (Nvm.pwm0   > PWM_MAX || Nvm.pwm0  >= Nvm.pwm25) {
+    Nvm.pwm0   = 0; valid = false;
+  }
+  if (Nvm.pwm25  > PWM_MAX || Nvm.pwm25 >= Nvm.pwm50 || Nvm.pwm25 <= Nvm.pwm0) {
+    Nvm.pwm25  = 64;  valid = false;
+  }
+  if (Nvm.pwm50  > PWM_MAX || Nvm.pwm50 >= Nvm.pwm75 || Nvm.pwm50 <= Nvm.pwm25) {
+    Nvm.pwm50  = 128; valid = false;
+  }
+  if (Nvm.pwm75  > PWM_MAX || Nvm.pwm75 >= Nvm.pwm100 || Nvm.pwm75 <= Nvm.pwm50) {
+    Nvm.pwm75  = 192; valid = false;
+  }
+  if (Nvm.pwm100 > PWM_MAX || Nvm.pwm100 <= Nvm.pwm75) {
+    Nvm.pwm100 = 255; valid = false;
+  }
+
+  if (!valid) {
+    Serial.println (F("Validation error!"));
+    nvmWrite ();
+  }
+  return valid;
+}
+
 
 /*
  * Read EEPROM data
  */
 void nvmRead (void) {
   eepromRead (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
-  if (Nvm.percent0   > ADC_MAX) Nvm.percent0   = 100, nvmWrite();
-  if (Nvm.percent25  > ADC_MAX) Nvm.percent25  = 250, nvmWrite();
-  if (Nvm.percent50  > ADC_MAX) Nvm.percent50  = 500, nvmWrite();
-  if (Nvm.percent75  > ADC_MAX) Nvm.percent75  = 750, nvmWrite();
-  if (Nvm.percent100 > ADC_MAX) Nvm.percent100 = 900, nvmWrite();
+  nvmValidate ();
 }
 
 
@@ -191,15 +236,18 @@ void nvmRead (void) {
  */
 void nvmWrite (void) {
   eepromWrite (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
+  nvmValidate ();
 }
 
 
 /*
  * CLI command for calibrating the sensor
  * argv[1]: water level in %
+ * argv[2]: optional ADC value
  */
 int cmdCalibrate (int argc, char **argv) {
   uint16_t val;
+
   if      (argc == 2) val = G.adcVal;
   else if (argc == 3) val = atoi(argv[2]);
   else                return 1;
@@ -207,31 +255,84 @@ int cmdCalibrate (int argc, char **argv) {
   switch ( atoi (argv[1]) ) {
     case 0:
       Nvm.percent0 = val;
-      Cli.xprintf ("0%%   : %u\n\n", Nvm.percent0);
+      nvmValidate ();
+      Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
       break;
     case 25:
       Nvm.percent25 = val;
-      Cli.xprintf ("25%%  : %u\n\n", Nvm.percent25);
+      nvmValidate ();
+      Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
       break;
     case 50:
       Nvm.percent50 = val;
-      Cli.xprintf ("50%%  : %u\n\n", Nvm.percent50);
+      nvmValidate ();
+      Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
       break;
     case 75:
       Nvm.percent75 = val;
-      Cli.xprintf ("75%%  : %u\n\n", Nvm.percent75);
+      nvmValidate ();
+      Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
       break;
     case 100:
       Nvm.percent100 = val;
-      Cli.xprintf ("100%% : %u\n\n", Nvm.percent100);
+      nvmValidate ();
+      Cli.xprintf ("100%% : %u\n", Nvm.percent100);
       break;
     default:
       return 1;
       break;
   }
+  Serial.println ("");
   nvmWrite ();
   return 0;
 }
+
+/*
+ * CLI command for calibrating the output voltage
+ * argv[1]: water level in %
+ * argv[2]: PWM setting
+ */
+int cmdCalibratePwm (int argc, char **argv) {
+  uint16_t val;
+
+  if (argc == 3) val = atoi(argv[2]);
+  else                return 1;
+
+  switch ( atoi (argv[1]) ) {
+    case 0:
+      Nvm.pwm0 = val;
+      nvmValidate ();
+      Cli.xprintf ("0%%   : %u\n", Nvm.pwm0);
+      break;
+    case 25:
+      Nvm.pwm25 = val;
+      nvmValidate ();
+      Cli.xprintf ("25%%  : %u\n", Nvm.pwm25);
+      break;
+    case 50:
+      Nvm.pwm50 = val;
+      nvmValidate ();
+      Cli.xprintf ("50%%  : %u\n", Nvm.pwm50);
+      break;
+    case 75:
+      Nvm.pwm75 = val;
+      nvmValidate ();
+      Cli.xprintf ("75%%  : %u\n", Nvm.pwm75);
+      break;
+    case 100:
+      Nvm.pwm100 = val;
+      nvmValidate ();
+      Cli.xprintf ("100%% : %u\n", Nvm.pwm100);
+      break;
+    default:
+      return 1;
+      break;
+  }
+  Serial.println ("");
+  nvmWrite ();
+  return 0;
+}
+
 
 
 /*
@@ -249,12 +350,18 @@ int cmdShow (int argc, char **argv) {
  * CLI command for displaying the calibration data
  */
 int cmdRom (int argc, char **argv) {
-  Cli.xprintf ("Calibration data:\n");
+  Cli.xprintf ("Sensor calibration:\n");
   Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
   Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
   Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
   Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
   Cli.xprintf ("100%% : %u\n", Nvm.percent100);
+  Cli.xprintf ("Output calibration:\n");
+  Cli.xprintf ("0%%   : %u\n", Nvm.pwm0);
+  Cli.xprintf ("25%%  : %u\n", Nvm.pwm25);
+  Cli.xprintf ("50%%  : %u\n", Nvm.pwm50);
+  Cli.xprintf ("75%%  : %u\n", Nvm.pwm75);
+  Cli.xprintf ("100%% : %u\n", Nvm.pwm100);
   Serial.println ("");
   return 0;
 }
