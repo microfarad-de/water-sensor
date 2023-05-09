@@ -183,7 +183,7 @@ bool nvmValidate (void) {
   for (i = 0; i < LUT_SIZE; i++) {
     if (Nvm.adc[i] > ADC_MAX) {
       if (NvmBak.adc[i] > ADC_MAX) {
-        Nvm.adc[i]     = G.adcDefaults[i];
+        Nvm.adc[i]    = G.adcDefaults[i];
         NvmBak.adc[i] = G.adcDefaults[i];
       }
       else {
@@ -193,7 +193,7 @@ bool nvmValidate (void) {
     }
     if (Nvm.pwm[i] > PWM_MAX) {
       if (NvmBak.pwm[i] > PWM_MAX) {
-        Nvm.pwm[i]     = G.pwmDefaults[i];
+        Nvm.pwm[i]    = G.pwmDefaults[i];
         NvmBak.pwm[i] = G.pwmDefaults[i];
       }
       else {
