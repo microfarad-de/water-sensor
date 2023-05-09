@@ -276,7 +276,10 @@ int cmdCalibrate (int argc, char **argv) {
 
   if      (argc == 2) val = G.adcVal;
   else if (argc == 3) val = atoi(argv[2]);
-  else                return 1;
+  else {
+    Serial.println(F("Incorrect number of arguments!"));
+    return 1;
+  }
 
   percent = atoi (argv[1]);
 
@@ -288,7 +291,7 @@ int cmdCalibrate (int argc, char **argv) {
   idx = percent / LUT_STEP;
   Nvm.adc[idx] = val;
   nvmValidate ();
-  Cli.xprintf ("%u%% : %u\n\n", percent, Nvm.adc[idx]);
+  Cli.xprintf ("%u%% = %u\n\n", percent, Nvm.adc[idx]);
   nvmWrite ();
   return 0;
 }
@@ -305,7 +308,10 @@ int cmdCalibratePwm (int argc, char **argv) {
   uint8_t  idx;
 
   if (argc == 3) val = atoi(argv[2]);
-  else                return 1;
+  else {
+    Serial.println(F("Incorrect number of arguments!"));
+    return 1;
+  }
 
   percent = atoi (argv[1]);
 
