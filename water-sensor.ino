@@ -37,11 +37,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Version: 1.0.0
- * Date:    May 08, 2023
+ * Version: 1.1.0
+ * Date:    May 09, 2023
  */
 #define VERSION_MAJOR 1  // Major version
-#define VERSION_MINOR 0  // Minor version
+#define VERSION_MINOR 1  // Minor version
 #define VERSION_MAINT 0  // Maintenance version
 
 #include <Arduino.h>
@@ -65,33 +65,34 @@
 #define ADC_AVG_SAMPLES       1  // Number of ADC samples to be averaged
 #define PWM_MAX             255  // Maximum PWM setting
 #define ADC_MAX            1023  // Maximum ADC value
+#define LUT_SIZE              5  // Lookup table size
+#define LUT_STEP             25  // Fill level percentage corresponding to each lookup table element
+#define VALID_STEP_STR   "<0|25|50|75|100>"  // String to display valid fill level percentage steps
 
 /*
  * Global variables
  */
 struct {
-  uint16_t adcVal        = 0;      // ADC reading value
-  uint8_t  pwmVal        = 0;      // PWM setting
+  uint16_t adcVal                = 0;                       // ADC reading value
+  uint8_t  pwmVal                = 0;                       // PWM setting
+  uint16_t adcDefaults[LUT_SIZE] = {4, 58, 100, 166, 188};  // ADC lookup table default values
+  uint16_t pwmDefaults[LUT_SIZE] = {0, 64, 128, 192, 255};  // PWM lookup table default values
 } G;
 
 
 /*
  * Parameters stored in EEPROM (non-volatile memory)
  */
-struct {
-  uint16_t percent0;     // ADC reading for 0%
-  uint16_t percent25;    // ADC reading for 25%
-  uint16_t percent50;    // ADC reading for 50%
-  uint16_t percent75;    // ADC reading for 75%
-  uint16_t percent100;   // ADC reading for 100%
-  uint16_t pwm0;         // PWM setting for 0%
-  uint16_t pwm25;        // PWM setting for 25%
-  uint16_t pwm50;        // PWM setting for 50%
-  uint16_t pwm75;        // PWM setting for 75%
-  uint16_t pwm100;       // PWM setting for 100%
-
+struct Nvm_t {
+  uint16_t adc[LUT_SIZE];  // ADC reading for [0%, 25%, 50%, 75%, 100%] (for LUT_STEP = 25)
+  uint16_t pwm[LUT_SIZE];  // PWM setting for [0%, 25%, 50%, 75%, 100%] (for LUT_STEP = 25)
 } Nvm;
 
+
+/*
+ * Backup copy of the Nvm parameters
+ */
+Nvm_t NvmBak;
 
 /*
  * Function declarations
@@ -127,8 +128,8 @@ void setup () {
   Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
   Serial.println (F("'h' for help"));
-  Cli.newCmd     ("cal" , "Calibrate sensor (arg: <0|25|50|75|100> [value])", cmdCalibrate);
-  Cli.newCmd     ("pwm" , "Calibrate output (arg: <0|25|50|75|100> <value>)", cmdCalibratePwm);
+  Cli.newCmd     ("cal" , "Calibrate sensor (arg: " VALID_STEP_STR " [value])", cmdCalibrate);
+  Cli.newCmd     ("pwm" , "Calibrate output (arg: " VALID_STEP_STR " <value>)", cmdCalibratePwm);
   Cli.newCmd     ("s"   , "Show real time readings"                  , cmdShow);
   Cli.newCmd     ("."   , ""                                         , cmdShow);
   Cli.newCmd     ("r"   , "Show the calibration data"                , cmdRom);
@@ -145,6 +146,7 @@ void setup () {
  * Main loop
  */
 void loop () {
+  uint8_t i;
 
   Cli.getCmd ();
 
@@ -152,26 +154,21 @@ void loop () {
 
     G.adcVal = Adc.result[SENSOR_APIN];
 
-    if (G.adcVal < Nvm.percent0) {
-      G.pwmVal = Nvm.pwm0;
-    }
-    else if (G.adcVal < Nvm.percent25) {
-      G.pwmVal = map (G.adcVal, Nvm.percent0, Nvm.percent25, Nvm.pwm0, Nvm.pwm25);
-    }
-    else if (G.adcVal < Nvm.percent50) {
-      G.pwmVal = map (G.adcVal, Nvm.percent25, Nvm.percent50, Nvm.pwm25, Nvm.pwm50);
-    }
-    else if (G.adcVal < Nvm.percent75) {
-      G.pwmVal = map (G.adcVal, Nvm.percent50, Nvm.percent75, Nvm.pwm50, Nvm.pwm75);
-    }
-    else if (G.adcVal < Nvm.percent100) {
-      G.pwmVal = map (G.adcVal, Nvm.percent75, Nvm.percent100, Nvm.pwm75, Nvm.pwm100);
-    }
-    else {
-      G.pwmVal = Nvm.pwm100;
+    for (i = 0; i <= LUT_SIZE; i++) {
+      if (i == 0 && G.adcVal < Nvm.adc[0]) {
+        G.pwmVal = Nvm.pwm[0];
+        break;
+      }
+      else if (i < LUT_SIZE && G.adcVal < Nvm.adc[i]) {
+        G.pwmVal = map (G.adcVal, Nvm.adc[i - 1], Nvm.adc[i], Nvm.pwm[i-1], Nvm.pwm[i]);
+        break;
+      }
+      else if (i == LUT_SIZE) {
+        G.pwmVal = Nvm.pwm[i - 1];
+      }
     }
 
-    analogWrite  (OUTPUT_PIN, G.pwmVal);
+    analogWrite (OUTPUT_PIN, G.pwmVal);
   }
 }
 
@@ -180,41 +177,68 @@ void loop () {
  * Validate EEPROM data
  */
 bool nvmValidate (void) {
+  uint8_t i;
   bool valid = true;
 
-  if (Nvm.percent0   > ADC_MAX || Nvm.percent0  >= Nvm.percent25)  {
-    Nvm.percent0   = 4; valid = false;
+  for (i = 0; i < LUT_SIZE; i++) {
+    if (Nvm.adc[i] > ADC_MAX) {
+      if (NvmBak.adc[i] > ADC_MAX) {
+        Nvm.adc[i]     = G.adcDefaults[i];
+        NvmBak.adc[i] = G.adcDefaults[i];
+      }
+      else {
+        Nvm.adc[i] = NvmBak.adc[i];
+      }
+      valid = false;
+    }
+    if (Nvm.pwm[i] > PWM_MAX) {
+      if (NvmBak.pwm[i] > PWM_MAX) {
+        Nvm.pwm[i]     = G.pwmDefaults[i];
+        NvmBak.pwm[i] = G.pwmDefaults[i];
+      }
+      else {
+        Nvm.pwm[i] = NvmBak.pwm[i];
+      }
+      valid = false;
+    }
   }
-  if (Nvm.percent25  > ADC_MAX || Nvm.percent25 >= Nvm.percent50 || Nvm.percent25 <= Nvm.percent0) {
-    Nvm.percent25  = 58; valid = false;
-  }
-  if (Nvm.percent50  > ADC_MAX || Nvm.percent50 >= Nvm.percent75 || Nvm.percent50 <= Nvm.percent25) {
-    Nvm.percent50  = 100; valid = false;
-  }
-  if (Nvm.percent75  > ADC_MAX || Nvm.percent75 >= Nvm.percent100 || Nvm.percent75 <= Nvm.percent50) {
-    Nvm.percent75  = 166; valid = false;
-  }
-  if (Nvm.percent100 > ADC_MAX || Nvm.percent100 <= Nvm.percent75) {
-    Nvm.percent100 = 188; valid = false;
-  }
-  if (Nvm.pwm0   > PWM_MAX || Nvm.pwm0  >= Nvm.pwm25) {
-    Nvm.pwm0   = 0; valid = false;
-  }
-  if (Nvm.pwm25  > PWM_MAX || Nvm.pwm25 >= Nvm.pwm50 || Nvm.pwm25 <= Nvm.pwm0) {
-    Nvm.pwm25  = 64;  valid = false;
-  }
-  if (Nvm.pwm50  > PWM_MAX || Nvm.pwm50 >= Nvm.pwm75 || Nvm.pwm50 <= Nvm.pwm25) {
-    Nvm.pwm50  = 128; valid = false;
-  }
-  if (Nvm.pwm75  > PWM_MAX || Nvm.pwm75 >= Nvm.pwm100 || Nvm.pwm75 <= Nvm.pwm50) {
-    Nvm.pwm75  = 192; valid = false;
-  }
-  if (Nvm.pwm100 > PWM_MAX || Nvm.pwm100 <= Nvm.pwm75) {
-    Nvm.pwm100 = 255; valid = false;
+
+  for (i = 0; i < LUT_SIZE; i++) {
+
+    if (i == 0) {
+      if(Nvm.adc[i] >= Nvm.adc[i+1]) {
+        Nvm.adc[i] = NvmBak.adc[i];
+        valid = false;
+      }
+      if (Nvm.pwm[i] >= Nvm.pwm[i+1]) {
+        Nvm.pwm[i] = NvmBak.pwm[i];
+        valid = false;
+      }
+    }
+    else if (i < LUT_SIZE - 1) {
+      if (Nvm.adc[i] >= Nvm.adc[i+1] || Nvm.adc[i] <= Nvm.adc[i - 1]) {
+        Nvm.adc[i] = NvmBak.adc[i];
+        valid = false;
+      }
+      if (Nvm.pwm[i] >= Nvm.pwm[i+1] || Nvm.pwm[i] <= Nvm.pwm[i - 1]) {
+        Nvm.pwm[i] = NvmBak.pwm[i];
+        valid = false;
+      }
+    }
+    else if (i == LUT_SIZE - 1) {
+      if (Nvm.adc[i] <= Nvm.adc[i - 1]) {
+        Nvm.adc[i] = NvmBak.adc[i];
+        valid = false;
+      }
+      if (Nvm.pwm[i] <= Nvm.pwm[i - 1]) {
+        Nvm.pwm[i] = NvmBak.pwm[i];
+        valid = false;
+      }
+    }
   }
 
   if (!valid) {
-    Serial.println (F("Validation error!"));
+    Serial.println (F("Second argument out of range!"));
     nvmWrite ();
   }
   return valid;
@@ -225,7 +249,8 @@ bool nvmValidate (void) {
  * Read EEPROM data
  */
 void nvmRead (void) {
-  eepromRead (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
+  eepromRead (0x0, (uint8_t*)&Nvm,    sizeof (Nvm));
+  eepromRead (0x0, (uint8_t*)&NvmBak, sizeof (Nvm));
   nvmValidate ();
 }
 
@@ -234,8 +259,8 @@ void nvmRead (void) {
  * Write EEPROM data
  */
 void nvmWrite (void) {
-  eepromWrite (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
   nvmValidate ();
+  eepromWrite (0x0, (uint8_t*)&Nvm, sizeof (Nvm));
 }
 
 
@@ -246,45 +271,28 @@ void nvmWrite (void) {
  */
 int cmdCalibrate (int argc, char **argv) {
   uint16_t val;
+  uint8_t  percent;
+  uint8_t  idx;
 
   if      (argc == 2) val = G.adcVal;
   else if (argc == 3) val = atoi(argv[2]);
   else                return 1;
 
-  switch ( atoi (argv[1]) ) {
-    case 0:
-      Nvm.percent0 = val;
-      nvmValidate ();
-      Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
-      break;
-    case 25:
-      Nvm.percent25 = val;
-      nvmValidate ();
-      Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
-      break;
-    case 50:
-      Nvm.percent50 = val;
-      nvmValidate ();
-      Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
-      break;
-    case 75:
-      Nvm.percent75 = val;
-      nvmValidate ();
-      Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
-      break;
-    case 100:
-      Nvm.percent100 = val;
-      nvmValidate ();
-      Cli.xprintf ("100%% : %u\n", Nvm.percent100);
-      break;
-    default:
-      return 1;
-      break;
+  percent = atoi (argv[1]);
+
+  if (percent % LUT_STEP != 0 || percent > 100) {
+    Serial.println(F("First argument must be within " VALID_STEP_STR "!"));
+    return 1;
   }
-  Serial.println ("");
+
+  idx = percent / LUT_STEP;
+  Nvm.adc[idx] = val;
+  nvmValidate ();
+  Cli.xprintf ("%u%% : %u\n\n", percent, Nvm.adc[idx]);
   nvmWrite ();
   return 0;
 }
+
 
 /*
  * CLI command for calibrating the output voltage
@@ -293,41 +301,23 @@ int cmdCalibrate (int argc, char **argv) {
  */
 int cmdCalibratePwm (int argc, char **argv) {
   uint16_t val;
+  uint8_t  percent;
+  uint8_t  idx;
 
   if (argc == 3) val = atoi(argv[2]);
   else                return 1;
 
-  switch ( atoi (argv[1]) ) {
-    case 0:
-      Nvm.pwm0 = val;
-      nvmValidate ();
-      Cli.xprintf ("0%%   : %u\n", Nvm.pwm0);
-      break;
-    case 25:
-      Nvm.pwm25 = val;
-      nvmValidate ();
-      Cli.xprintf ("25%%  : %u\n", Nvm.pwm25);
-      break;
-    case 50:
-      Nvm.pwm50 = val;
-      nvmValidate ();
-      Cli.xprintf ("50%%  : %u\n", Nvm.pwm50);
-      break;
-    case 75:
-      Nvm.pwm75 = val;
-      nvmValidate ();
-      Cli.xprintf ("75%%  : %u\n", Nvm.pwm75);
-      break;
-    case 100:
-      Nvm.pwm100 = val;
-      nvmValidate ();
-      Cli.xprintf ("100%% : %u\n", Nvm.pwm100);
-      break;
-    default:
-      return 1;
-      break;
+  percent = atoi (argv[1]);
+
+  if (percent % LUT_STEP != 0 || percent > 100) {
+    Serial.println(F("First argument must be within " VALID_STEP_STR "!"));
+    return 1;
   }
-  Serial.println ("");
+
+  idx = percent / LUT_STEP;
+  Nvm.pwm[idx] = val;
+  nvmValidate ();
+  Cli.xprintf ("%u%% = %u\n\n", percent, Nvm.pwm[idx]);
   nvmWrite ();
   return 0;
 }
@@ -349,18 +339,18 @@ int cmdShow (int argc, char **argv) {
  * CLI command for displaying the calibration data
  */
 int cmdRom (int argc, char **argv) {
+  uint8_t i;
   Cli.xprintf ("Sensor calibration:\n");
-  Cli.xprintf ("0%%   : %u\n", Nvm.percent0);
-  Cli.xprintf ("25%%  : %u\n", Nvm.percent25);
-  Cli.xprintf ("50%%  : %u\n", Nvm.percent50);
-  Cli.xprintf ("75%%  : %u\n", Nvm.percent75);
-  Cli.xprintf ("100%% : %u\n", Nvm.percent100);
+  for (i = 0; i < LUT_SIZE; i ++) {
+    Cli.xprintf ("%3u%% = %u\n", i * LUT_STEP, Nvm.adc[i]);
+  }
+  Serial.println("");
   Cli.xprintf ("Output calibration:\n");
-  Cli.xprintf ("0%%   : %u\n", Nvm.pwm0);
-  Cli.xprintf ("25%%  : %u\n", Nvm.pwm25);
-  Cli.xprintf ("50%%  : %u\n", Nvm.pwm50);
-  Cli.xprintf ("75%%  : %u\n", Nvm.pwm75);
-  Cli.xprintf ("100%% : %u\n", Nvm.pwm100);
+  for (i = 0; i < LUT_SIZE; i ++) {
+    Cli.xprintf ("%3u%% = %u\n", i * LUT_STEP, Nvm.pwm[i]);
+  }
+  Serial.println ("");
+  Cli.xprintf    ("V %d.%d.%d\n", VERSION_MAJOR, VERSION_MINOR, VERSION_MAINT);
   Serial.println ("");
   return 0;
 }
