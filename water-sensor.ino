@@ -184,7 +184,6 @@ bool nvmValidate (void) {
     if (Nvm.adc[i] > ADC_MAX) {
       if (NvmBak.adc[i] > ADC_MAX) {
         Nvm.adc[i]    = G.adcDefaults[i];
-        NvmBak.adc[i] = G.adcDefaults[i];
       }
       else {
         Nvm.adc[i] = NvmBak.adc[i];
@@ -194,7 +193,6 @@ bool nvmValidate (void) {
     if (Nvm.pwm[i] > PWM_MAX) {
       if (NvmBak.pwm[i] > PWM_MAX) {
         Nvm.pwm[i]    = G.pwmDefaults[i];
-        NvmBak.pwm[i] = G.pwmDefaults[i];
       }
       else {
         Nvm.pwm[i] = NvmBak.pwm[i];
@@ -236,6 +234,8 @@ bool nvmValidate (void) {
       }
     }
   }
+
+  NvmBak = Nvm;
 
   if (!valid) {
     Serial.println (F("Second argument out of range!"));
